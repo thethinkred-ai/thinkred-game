@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import './App.css';
+
+@theme {
+  --color-brand-red: #dc2626;
+  --color-brand-dark: #020617;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+@utility bg-slate-950\/30 { background: rgba(2, 6, 23, .3); }
+@utility bg-slate-950\/40 { background: rgba(2, 6, 23, .4); }
+@utility bg-slate-950\/50 { background: rgba(2, 6, 23, .5); }
+@utility bg-slate-950\/60 { background: rgba(2, 6, 23, .6); }
+@utility bg-slate-900\/20 { background: rgba(15, 23, 42, .2); }
+@utility bg-slate-900\/30 { background: rgba(15, 23, 42, .3); }
+@utility bg-slate-900\/50 { background: rgba(15, 23, 42, .5); }
+@utility bg-slate-900\/60 { background: rgba(15, 23, 42, .6); }
+@utility bg-slate-800\/40 { background: rgba(30, 41, 59, .4); }
+@utility bg-slate-800\/50 { background: rgba(30, 41, 59, .5); }
+@utility bg-red-500\/10 { background: rgba(239, 68, 68, .1); }
+@utility bg-red-900\/20 { background: rgba(127, 29, 29, .2); }
+@utility bg-red-950\/10 { background: rgba(69, 10, 10, .1); }
+@utility bg-emerald-500\/5 { background: rgba(16, 185, 129, .05); }
+@utility bg-emerald-500\/10 { background: rgba(16, 185, 129, .1); }
+@utility bg-blue-500\/10 { background: rgba(59, 130, 246, .1); }
+@utility bg-purple-500\/10 { background: rgba(168, 85, 247, .1); }
+@utility bg-rose-500\/10 { background: rgba(244, 63, 94, .1); }
+@utility bg-yellow-500\/10 { background: rgba(234, 179, 8, .1); }
+@utility bg-amber-500\/10 { background: rgba(245, 158, 11, .1); }
+@utility bg-amber-500\/15 { background: rgba(245, 158, 11, .15); }
+@utility bg-amber-500\/20 { background: rgba(245, 158, 11, .2); }
+@utility border-slate-700\/80 { border-color: rgba(51, 65, 85, .8); }
+@utility border-slate-800\/30 { border-color: rgba(30, 41, 59, .3); }
+@utility border-slate-800\/40 { border-color: rgba(30, 41, 59, .4); }
+@utility border-slate-800\/60 { border-color: rgba(30, 41, 59, .6); }
+@utility border-slate-800\/80 { border-color: rgba(30, 41, 59, .8); }
+@utility border-red-500\/20 { border-color: rgba(239, 68, 68, .2); }
+@utility border-red-500\/30 { border-color: rgba(239, 68, 68, .3); }
+@utility border-emerald-500\/10 { border-color: rgba(16, 185, 129, .1); }
+@utility border-emerald-500\/20 { border-color: rgba(16, 185, 129, .2); }
+@utility border-blue-500\/20 { border-color: rgba(59, 130, 246, .2); }
+@utility border-amber-500\/20 { border-color: rgba(245, 158, 11, .2); }
+@utility border-amber-500\/30 { border-color: rgba(245, 158, 11, .3); }
