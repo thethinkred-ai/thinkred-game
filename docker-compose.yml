@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET}
+      - STEPIK_CLIENT_ID=${STEPIK_CLIENT_ID}
+      - STEPIK_CLIENT_SECRET=${STEPIK_CLIENT_SECRET}
+      - STEPIK_REDIRECT_URI=${STEPIK_REDIRECT_URI:-http://localhost/auth/stepik/callback}
+      - DATABASE_PATH=/data/thinkred.db
+    volumes:
+      - game-data:/data
+    restart: unless-stopped
+
+volumes:
+  game-data:
