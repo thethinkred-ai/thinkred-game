@@ -313,39 +313,60 @@ export class StepikService {
       return { course: null, sections: [], lessons: [] };
     }
 
-    const [courseRes, sectionsRes] = await Promise.all([
-      this.apiClient.get(`/courses/${targetCourseId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      this.apiClient.get('/sections', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { course: targetCourseId },
-      }),
-    ]);
+    const authHeader = { headers: { Authorization: `Bearer ${accessToken}` } };
 
-    const sections = sectionsRes.data.sections ?? [];
-    const lessons: unknown[] = [];
+    const courseRes = await this.apiClient.get(`/courses/${targetCourseId}`, authHeader);
+    const course = courseRes.data.courses?.[0] ?? null;
+    const sectionIds: number[] = course?.sections ?? [];
 
-    for (const section of sections) {
-      const unitsRes = await this.apiClient.get('/units', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { section: section.id },
-      });
-      const lessonIds = (unitsRes.data.units ?? []).map((u: { lesson: number }) => u.lesson);
-      if (lessonIds.length === 0) continue;
-
-      const lessonsRes = await this.apiClient.get('/lessons', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { ids: lessonIds.join(',') },
-      });
-      lessons.push(...(lessonsRes.data.lessons ?? []));
+    if (sectionIds.length === 0) {
+      return { course, sections: [], lessons: [] };
     }
 
-    return {
-      course: courseRes.data.courses?.[0] ?? null,
-      sections,
-      lessons,
-    };
+    // Stepik does not support filtering /sections by ?course=; fetch by ids instead.
+    const sectionsRes = await this.apiClient.get('/sections', {
+      ...authHeader,
+      params: { ids: sectionIds },
+    });
+    const sections = (sectionsRes.data.sections ?? []).sort(
+      (a: { position: number }, b: { position: number }) => a.position - b.position
+    );
+
+    // Map each unit id to its section id for grouping lessons under sections.
+    const unitToSection = new Map<number, number>();
+    for (const s of sections as Array<{ id: number; units?: number[] }>) {
+      for (const uid of s.units ?? []) unitToSection.set(uid, s.id);
+    }
+    const unitIds: number[] = [...unitToSection.keys()];
+    let lessons: unknown[] = [];
+
+    if (unitIds.length > 0) {
+      const unitsRes = await this.apiClient.get('/units', {
+        ...authHeader,
+        params: { ids: unitIds },
+      });
+      const units = (unitsRes.data.units ?? []) as Array<{ id: number; lesson: number; position: number }>;
+      const lessonToSection = new Map<number, number>();
+      const lessonToPosition = new Map<number, number>();
+      for (const u of units) {
+        lessonToSection.set(u.lesson, unitToSection.get(u.id) ?? 0);
+        lessonToPosition.set(u.lesson, u.position);
+      }
+      const lessonIds = units.map((u) => u.lesson);
+      if (lessonIds.length > 0) {
+        const lessonsRes = await this.apiClient.get('/lessons', {
+          ...authHeader,
+          params: { ids: lessonIds },
+        });
+        lessons = (lessonsRes.data.lessons ?? []).map((l: { id: number }) => ({
+          ...l,
+          sectionId: lessonToSection.get(l.id) ?? 0,
+          position: lessonToPosition.get(l.id) ?? 0,
+        }));
+      }
+    }
+
+    return { course, sections, lessons };
   }
 
   isEnterpriseUnlocked(unlockConditions: readonly string[], completedLessons: string[]): boolean {
