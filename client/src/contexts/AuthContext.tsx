@@ -44,11 +44,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = () => {
-    window.location.href = '/auth/stepik';
+    window.location.href = '/api/auth/stepik';
   };
 
   const devLogin = () => {
-    window.location.href = '/auth/dev-login';
+    window.location.href = '/api/auth/dev-login';
   };
 
   const logout = async () => {
