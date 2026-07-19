@@ -6,6 +6,8 @@ interface StepikLesson {
   id: number;
   title: string;
   progress?: string;
+  sectionId?: number;
+  position?: number;
 }
 
 interface StepikSection {
@@ -143,7 +145,10 @@ export const StepikCoursePanel: React.FC<StepikCoursePanelProps> = ({ completedL
               <div key={section.id} className="border border-slate-800/60 rounded-lg p-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-2">{section.title}</h3>
                 <div className="space-y-1">
-                  {lessons.slice(0, 5).map((lesson) => {
+                  {lessons
+                    .filter((lesson) => lesson.sectionId === section.id)
+                    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                    .map((lesson) => {
                       const status = lessonProgress(lesson);
                       return (
                         <div
