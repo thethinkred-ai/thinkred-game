@@ -139,7 +139,7 @@ export const GAME_CONSTANTS = {
   AUTO_SAVE_INTERVAL: 60000, // 1 minute
   
   // API constants
-  API_TIMEOUT: 10000,
+  API_TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
   PAGE_SIZE: 20
 } as const;
