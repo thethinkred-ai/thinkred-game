@@ -52,14 +52,16 @@ async function main() {
     legacyHeaders: false,
   });
 
-  app.use('/auth', authLimiter, authRoutes);
+  app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/game', apiLimiter, attachUser, gameRoutes);
   app.use('/api/stepik', apiLimiter, attachUser, stepikRoutes);
   app.use('/api/me', apiLimiter, attachUser, meRoutes);
 
-  app.get('/health', (_req, res) => {
+  const healthHandler = (_req: any, res: any) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  };
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 
   app.get('/api/legal/privacy', (_req, res) => {
     res.json({
