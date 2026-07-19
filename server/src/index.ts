@@ -39,18 +39,21 @@ async function main() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
+  const rateLimitOptions = {
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { xForwardedForHeader: false } as any,
+  };
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.path === '/health',
+    ...rateLimitOptions,
+    skip: (req: any) => req.path === '/health',
   });
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 120,
-    standardHeaders: true,
-    legacyHeaders: false,
+    ...rateLimitOptions,
   });
 
   app.use('/api/auth', authLimiter, authRoutes);
