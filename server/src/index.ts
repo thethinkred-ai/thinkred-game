@@ -17,6 +17,7 @@ import { meRoutes } from './routes/me';
 import { errorHandler } from './middleware/errorHandler';
 import { attachUser } from './middleware/auth';
 import { logger } from './utils/logger';
+import path from 'path';
 import { initDatabase, closeDatabase } from './database';
 import { UserModel } from './models/UserModel';
 
@@ -71,6 +72,12 @@ async function main() {
       retention: 'Данные хранятся до удаления аккаунта. JWT действуют 7 дней.',
       rights: ['GET /api/me/export — экспорт данных', 'DELETE /api/me — удаление аккаунта'],
     });
+  });
+
+  const clientDist = path.resolve(process.cwd(), '../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
   });
 
   app.use(errorHandler);
