@@ -154,14 +154,14 @@ class ApiService {
     return response.data;
   }
 
-  // Auth API (mounted at /auth, not /api/auth)
+  // Auth API
   async verifyToken() {
-    const response = await axios.get('/auth/verify', { withCredentials: true });
+    const response = await axios.get('/api/auth/verify', { withCredentials: true });
     return response.data;
   }
 
   async logout() {
-    const response = await axios.post('/auth/logout', null, { withCredentials: true });
+    const response = await axios.post('/api/auth/logout', null, { withCredentials: true });
     return response.data;
   }
 }
