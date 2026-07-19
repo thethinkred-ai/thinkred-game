@@ -10,10 +10,10 @@ const userModel = new UserModel();
 const isProd = process.env.NODE_ENV === 'production';
 const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
 
-const cookieOptions = (maxAge: number): { httpOnly: true; secure: boolean; sameSite: 'strict'; maxAge: number; path: string } => ({
+const cookieOptions = (maxAge: number, sameSite: 'strict' | 'lax' = 'strict'): { httpOnly: true; secure: boolean; sameSite: 'strict' | 'lax'; maxAge: number; path: string } => ({
   httpOnly: true,
   secure: isProd,
-  sameSite: 'strict',
+  sameSite,
   maxAge,
   path: '/',
 });
@@ -23,8 +23,8 @@ router.get('/stepik', asyncHandler(async (req, res) => {
   let authUrl: string;
   try {
     const { state, codeVerifier, codeChallenge } = stepikService.generateOAuthState();
-    res.cookie('stepik_state', state, cookieOptions(5 * 60 * 1000));
-    res.cookie('stepik_pkce', codeVerifier, cookieOptions(5 * 60 * 1000));
+    res.cookie('stepik_state', state, cookieOptions(5 * 60 * 1000, 'lax'));
+    res.cookie('stepik_pkce', codeVerifier, cookieOptions(5 * 60 * 1000, 'lax'));
     authUrl = stepikService.getAuthUrl(state, codeChallenge);
   } catch (e: any) {
     if (e.message && e.message.includes('not configured')) {
@@ -47,8 +47,8 @@ router.get('/callback', asyncHandler(async (req, res) => {
     return;
   }
 
-  res.clearCookie('stepik_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'strict' });
-  res.clearCookie('stepik_pkce', { path: '/', httpOnly: true, secure: isProd, sameSite: 'strict' });
+  res.clearCookie('stepik_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+  res.clearCookie('stepik_pkce', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
 
   try {
     const authResult = await stepikService.authenticate(code as string, codeVerifier);
@@ -80,8 +80,8 @@ router.get('/stepik/callback', asyncHandler(async (req, res) => {
     throw createError('Authorization code or state is invalid', 400);
   }
 
-  res.clearCookie('stepik_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'strict' });
-  res.clearCookie('stepik_pkce', { path: '/', httpOnly: true, secure: isProd, sameSite: 'strict' });
+  res.clearCookie('stepik_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+  res.clearCookie('stepik_pkce', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
 
   try {
     const authResult = await stepikService.authenticate(code as string, codeVerifier);
