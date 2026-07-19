@@ -95,7 +95,7 @@ export const StepikCoursePanel: React.FC<StepikCoursePanelProps> = ({ completedL
         <p className="text-sm text-slate-400">Синхронизация прогресса с обучением</p>
       </div>
 
-      {sections.length === 0 ? (
+      {sections.length === 0 && lessons.length === 0 ? (
         <div className="px-4 pb-4 space-y-3">
           <p className="text-sm text-slate-400">
             Настройте STEPIK_COURSE_ID в server/.env для отображения структуры курса.
@@ -114,6 +114,26 @@ export const StepikCoursePanel: React.FC<StepikCoursePanelProps> = ({ completedL
               </span>
             ))}
           </div>
+        </div>
+      ) : sections.length === 0 ? (
+        <div className="space-y-2 px-4 pb-4">
+          {lessons.map((lesson) => {
+            const status = lessonProgress(lesson);
+            return (
+              <div key={lesson.id} className="flex items-center justify-between text-sm py-1">
+                <span className="text-slate-300">{lesson.title}</span>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded ${
+                    status === 'passed' || status === 'completed'
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'bg-slate-800 text-slate-500'
+                  }`}
+                >
+                  {status === 'passed' || status === 'completed' ? 'Пройден' : 'Не пройден'}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-4 px-4 pb-4">
