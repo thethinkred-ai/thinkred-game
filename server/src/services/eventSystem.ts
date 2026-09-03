@@ -1,7 +1,10 @@
 import { EnterpriseDecision, GameEvent } from '../../../shared/types';
+import { randomUUID } from 'crypto';
 import { EventModel } from '../models/EventModel';
 import { GAME_EVENTS } from '../../../shared/constants/game';
 import { getEventChoices, buildGameEventFromRow } from '../utils/eventTemplates';
+import { LESSON_EPISODES } from '../utils/lessonEpisodes';
+import { normalizeCompletedLessons } from '../utils/stepikConfig';
 import { EnterpriseModel, EnterpriseData } from '../models/EnterpriseModel';
 import { EconomicModelEngine } from './economicModel';
 import { UserModel } from '../models/UserModel';
@@ -185,6 +188,35 @@ export class EventSystem {
     }
 
     return events;
+  }
+
+  /**
+   * Deterministic campaign spine: completing a Stepik lesson unlocks its episode.
+   * Idempotent — each lesson key spawns at most once per user. Complements the
+   * probabilistic checkForEvents(). Returns only newly created episodes.
+   */
+  spawnLessonEpisodes(userId: number, completedLessonKeys: string[]): GameEvent[] {
+    const done = new Set(normalizeCompletedLessons(completedLessonKeys));
+    const spawned: GameEvent[] = [];
+
+    for (const episode of LESSON_EPISODES) {
+      if (!done.has(episode.key)) continue;
+      if (this.eventModel.existsByUserAndType(userId, episode.key)) continue;
+
+      const row = this.eventModel.create({
+        id: randomUUID(),
+        user_id: userId,
+        event_type: episode.key,
+        title: episode.title,
+        description: episode.description,
+        period: episode.period,
+        year: new Date().getFullYear(),
+        choices_json: JSON.stringify(episode.choices),
+      });
+      spawned.push(buildGameEventFromRow(row) as GameEvent);
+    }
+
+    return spawned;
   }
 
   private evaluateTriggers(snapshot: GameSnapshot): string[] {

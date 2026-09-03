@@ -18,7 +18,7 @@ import { EventSystem } from './eventSystem';
 import { StepikService } from './stepikService';
 import { PeriodProgressionService } from './periodProgression';
 import { LESSON_UNLOCK_TIERS } from '../../../shared/constants/stepikLessons';
-import { normalizeCompletedLessons } from '../utils/stepikConfig';
+import { normalizeCompletedLessons, normalizeLessonKey } from '../utils/stepikConfig';
 import { buildGameEventFromRow } from '../utils/eventTemplates';
 import { AchievementModel } from '../models/AchievementModel';
 import { SnapshotModel } from '../models/SnapshotModel';
@@ -202,6 +202,9 @@ export class GameService {
       enterprises = [await this.seedInitialEnterprise(userId)];
     }
 
+    // Unlock deterministic campaign episodes for lessons the player has completed,
+    // then read active events so new episodes appear in this same response.
+    this.eventSystem.spawnLessonEpisodes(userId, completedLessons);
     const activeEvents = this.eventModel.findActiveByUser(userId).map(mapEvent);
     const economicIndicators = this.economicModel.calculateIndicators(enterprises);
     const marketState = this.economicModel.simulateMarket(enterprises);
@@ -444,8 +447,10 @@ export class GameService {
       throw createError('Invalid choice', 400);
     }
 
-    const completedLessons = await this.getCompletedLessons(userId);
-    const missingKnowledge = choice.requiredKnowledge.filter((l) => !completedLessons.includes(l));
+    const completedLessons = normalizeCompletedLessons(await this.getCompletedLessons(userId));
+    const missingKnowledge = choice.requiredKnowledge
+      .map(normalizeLessonKey)
+      .filter((l) => !completedLessons.includes(l));
     if (missingKnowledge.length > 0) {
       throw createError(
         `Complete required lessons first: ${missingKnowledge.join(', ')}`,

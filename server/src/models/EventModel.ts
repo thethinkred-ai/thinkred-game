@@ -28,6 +28,15 @@ export class EventModel {
     );
   }
 
+  /** Any event (active or resolved) of this type already exists for the user. */
+  existsByUserAndType(userId: number, eventType: string): boolean {
+    const row = queryOne<{ exists: number }>(
+      'SELECT COUNT(*) AS exists FROM game_events WHERE user_id = ? AND event_type = ?',
+      [userId, eventType]
+    );
+    return (row?.exists ?? 0) > 0;
+  }
+
   create(data: {
     id: string;
     user_id: number;

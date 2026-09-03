@@ -20,14 +20,14 @@ export const GAME_CONSTANTS = {
       baseProduction: 500,
       workerCapacity: 100,
       technologyMultiplier: 1.5,
-      unlockConditions: ['lesson_18', 'lesson_20']
+      unlockConditions: ['lesson_18', 'lesson_19']
     },
     shop: {
       baseCost: 5000,
       baseProduction: 50,
       workerCapacity: 5,
       technologyMultiplier: 1.0,
-      unlockConditions: ['lesson_07', 'lesson_08']
+      unlockConditions: ['lesson_06', 'lesson_07']
     },
     farm: {
       baseCost: 8000,
@@ -41,14 +41,14 @@ export const GAME_CONSTANTS = {
       baseProduction: 200,
       workerCapacity: 50,
       technologyMultiplier: 1.2,
-      unlockConditions: ['lesson_10']
+      unlockConditions: ['lesson_12']
     },
     research_center: {
       baseCost: 30000,
       baseProduction: 0,
       workerCapacity: 30,
       technologyMultiplier: 2.0,
-      unlockConditions: ['lesson_22', 'lesson_28']
+      unlockConditions: ['lesson_26', 'lesson_28']
     }
   },
   

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../../services/api';
-import { ALL_LESSON_KEYS, LESSON_LABELS, getLessonLabel } from '../../../shared/constants/stepikLessons';
+import { LESSON_LABELS } from '../../../../shared/constants/stepikLessons';
 
 interface StepikLesson {
   id: number;
