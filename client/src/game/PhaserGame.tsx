@@ -82,8 +82,8 @@ export const PhaserGame: React.FC<PhaserGameProps> = ({ sceneData }) => {
       )}
       <div
         ref={containerRef}
-        className="w-full rounded-xl overflow-hidden border border-slate-800/60 shadow-inner"
-        style={{ minHeight: 600 }}
+        className="w-full rounded-xl overflow-hidden border border-slate-800/60 shadow-inner touch-none select-none"
+        style={{ minHeight: 600, touchAction: 'none' }}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../../services/api';
-import { LESSON_LABELS } from './LessonGateBadge';
+import { ALL_LESSON_KEYS, LESSON_LABELS, getLessonLabel } from '../../../shared/constants/stepikLessons';
 
 interface StepikLesson {
   id: number;
@@ -83,12 +83,15 @@ export const StepikCoursePanel: React.FC<StepikCoursePanelProps> = ({ completedL
   }
 
   const lessonProgress = (lesson: StepikLesson) => {
-    const key = Object.entries(LESSON_LABELS).find(([, label]) =>
-      lesson.title.toLowerCase().includes(label.split(':')[1]?.trim().toLowerCase() ?? '')
-    )?.[0];
+    const key = Object.entries(completedLessonsMap).find(([, id]) => id === lesson.id)?.[0]
+      ?? Object.entries(LESSON_LABELS).find(([, label]) =>
+        lesson.title.toLowerCase().includes(label.slice(0, 12).toLowerCase())
+      )?.[0];
     if (key && completedLessons.includes(key)) return 'passed';
     return lesson.progress ?? 'not_started';
   };
+
+  const completedLessonsMap: Record<string, number> = {};
 
   return (
     <div className="card">

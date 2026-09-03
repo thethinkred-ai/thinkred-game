@@ -347,7 +347,8 @@ sudo chown -R $USER:$USER /var/www/thinkred-game
 echo "🔧 Starting services..."
 cd /var/www/thinkred-game/server
 npm ci --only=production
-pm2 start ecosystem.config.js
+cd /var/www/thinkred-game
+pm2 start ecosystem.config.cjs
 
 # Save PM2 configuration
 pm2 save

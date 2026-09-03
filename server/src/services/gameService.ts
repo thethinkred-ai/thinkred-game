@@ -17,11 +17,13 @@ import { EconomicModelEngine } from './economicModel';
 import { EventSystem } from './eventSystem';
 import { StepikService } from './stepikService';
 import { PeriodProgressionService } from './periodProgression';
+import { LESSON_UNLOCK_TIERS } from '../../../shared/constants/stepikLessons';
+import { normalizeCompletedLessons } from '../utils/stepikConfig';
 import { buildGameEventFromRow } from '../utils/eventTemplates';
-import { getDatabase } from '../database';
 import { AchievementModel } from '../models/AchievementModel';
 import { SnapshotModel } from '../models/SnapshotModel';
 import { DecisionCooldownModel } from '../models/DecisionCooldownModel';
+import { DecisionModel } from '../models/DecisionModel';
 import { ACHIEVEMENTS } from '../../../shared/constants/game';
 
 export function mapEnterprise(row: EnterpriseData): Enterprise {
@@ -72,25 +74,29 @@ export class GameService {
   private stepikService = new StepikService();
   private periodService = new PeriodProgressionService();
   private cooldownModel = new DecisionCooldownModel();
+  private decisionModel = new DecisionModel();
 
   private async getCompletedLessons(userId: number): Promise<string[]> {
     return this.stepikService.getCompletedLessons(userId);
   }
 
   private computeUnlockedFeatures(completedLessons: string[]): string[] {
+    const done = new Set(normalizeCompletedLessons(completedLessons));
     const features = new Set<string>(['basic_enterprises']);
-    if (completedLessons.some((l) => ['lesson_1', 'lesson_2'].includes(l))) {
-      features.add('basic_enterprises');
+
+    const tierChecks: Array<[string, readonly string[]]> = [
+      ['basic_enterprises', LESSON_UNLOCK_TIERS.basic_enterprises],
+      ['advanced_enterprises', [...LESSON_UNLOCK_TIERS.manufacture, ...LESSON_UNLOCK_TIERS.machinery]],
+      ['research', LESSON_UNLOCK_TIERS.accumulation],
+      ['international_trade', LESSON_UNLOCK_TIERS.imperialism],
+    ];
+
+    for (const [feature, required] of tierChecks) {
+      if (required.some((l) => done.has(l))) {
+        features.add(feature);
+      }
     }
-    if (completedLessons.some((l) => ['lesson_3', 'lesson_4', 'lesson_5'].includes(l))) {
-      features.add('advanced_enterprises');
-    }
-    if (completedLessons.includes('lesson_6')) {
-      features.add('research');
-    }
-    if (completedLessons.includes('lesson_8')) {
-      features.add('international_trade');
-    }
+
     return Array.from(features);
   }
 
@@ -388,18 +394,13 @@ export class GameService {
     const updated = this.enterpriseModel.findById(enterpriseId)!;
     this.recalculateEconomics(updated);
 
-    const db = getDatabase();
-    db.run(
-      'INSERT INTO decisions (id, user_id, enterprise_id, type, value, result) VALUES (?, ?, ?, ?, ?, ?)',
-      [
-        Math.random().toString(36).substr(2, 9),
-        userId,
-        enterpriseId,
-        decision.type,
-        decision.value,
-        JSON.stringify(result),
-      ]
-    );
+    this.decisionModel.create({
+      user_id: userId,
+      enterprise_id: enterpriseId,
+      type: decision.type,
+      value: decision.value,
+      result,
+    });
 
     this.userModel.updateProgress(userId, {
       experience: (this.userModel.findById(userId)?.experience || 0) + GAME_CONSTANTS.EXPERIENCE_PER_DECISION,
@@ -476,18 +477,13 @@ export class GameService {
 
     this.eventModel.resolve(eventId, choiceId);
 
-    const db = getDatabase();
-    db.run(
-      'INSERT INTO decisions (id, user_id, enterprise_id, type, value, result) VALUES (?, ?, ?, ?, ?, ?)',
-      [
-        Math.random().toString(36).substr(2, 9),
-        userId,
-        null,
-        `event_response:${event.event_type}`,
-        0,
-        JSON.stringify({ eventId, choiceId, impact: choice.economicImpact }),
-      ]
-    );
+    this.decisionModel.create({
+      user_id: userId,
+      enterprise_id: null,
+      type: `event_response:${event.event_type}`,
+      value: 0,
+      result: { eventId, choiceId, impact: choice.economicImpact },
+    });
 
     this.userModel.updateProgress(userId, {
       experience: (this.userModel.findById(userId)?.experience || 0) + GAME_CONSTANTS.EXPERIENCE_PER_DECISION,

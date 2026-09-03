@@ -295,9 +295,8 @@ docker-compose ps
 # Установка PM2
 npm install -g pm2
 
-# Запуск
-cd build/server
-pm2 start ecosystem.config.js
+# Запуск (конфиг в корне проекта, секреты берутся из server/.env)
+pm2 start ecosystem.config.cjs
 ```
 
 ---

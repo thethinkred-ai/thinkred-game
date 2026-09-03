@@ -8,8 +8,13 @@ import {
   WORLD_WIDTH,
 } from '../config/gameConfig';
 import { resolveLocationCoords } from '../utils/locationCoords';
-import { createEnterpriseBuilding, ENTERPRISE_TYPE_ICONS } from '../utils/enterpriseGraphics';
+import {
+  createEnterpriseSprite,
+  ensureEnterpriseTextures,
+  preloadEnterpriseSprites,
+} from '../utils/spriteAssets';
 import { Enterprise, HistoricalPeriod } from '../../../../shared/types';
+import { Minimap, TouchControls, getMapHintText, isTouchDevice } from '../controls/mapControls';
 
 export interface MapEnterprise {
   id: string;
@@ -48,11 +53,18 @@ export class WorldScene extends Phaser.Scene {
   private periodLabel!: Phaser.GameObjects.Text;
   private hintLabel!: Phaser.GameObjects.Text;
 
-  private isPanning = false;
-  private panStart = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
+  private minimap!: Minimap;
+  private touchControls!: TouchControls;
+
+  private lastTapTime = 0;
+  private lastTapPos = { x: 0, y: 0 };
 
   constructor() {
     super({ key: 'WorldScene' });
+  }
+
+  preload() {
+    preloadEnterpriseSprites(this);
   }
 
   init(data: WorldSceneData) {
@@ -60,6 +72,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create() {
+    ensureEnterpriseTextures(this);
+
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setZoom(1);
     this.cameras.main.centerOn(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
@@ -76,13 +90,28 @@ export class WorldScene extends Phaser.Scene {
     this.lockedLayer.setDepth(3);
     this.uiLayer.setDepth(20);
 
+    this.minimap = new Minimap(this);
+    this.minimap.create();
+
+    this.touchControls = new TouchControls(this);
+    this.touchControls.configure({
+      isBlocked: (pointer) => this.isUiPointer(pointer),
+      onPanEnd: () => undefined,
+    });
+    this.touchControls.setup();
+
     this.drawBackground();
     this.drawGrid();
     this.drawBuildButton();
     this.drawMapHint();
-    this.setupCameraControls();
+    this.setupWheelZoom();
+    this.setupDoubleTapZoom();
     this.renderEnterprises();
     this.renderLockedSlots();
+  }
+
+  update() {
+    this.minimap.update(this.enterprises, this.cameras.main);
   }
 
   syncData(data: WorldSceneData) {
@@ -116,6 +145,13 @@ export class WorldScene extends Phaser.Scene {
         y: coords.y,
       };
     });
+  }
+
+  private isUiPointer(pointer: Phaser.Input.Pointer): boolean {
+    if (pointer.y < 56 && pointer.x > GAME_WIDTH - 180) return true;
+    if (pointer.y > GAME_HEIGHT - 48 && pointer.x < 440) return true;
+    if (this.minimap?.isPointerOver(pointer)) return true;
+    return false;
   }
 
   private drawBackground() {
@@ -198,7 +234,11 @@ export class WorldScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     const label = this.add.text(-50, -8, 'Построить', { fontSize: '14px', color: '#fff' });
     screenBtn.add([bg, label]);
-    bg.on('pointerdown', () => this.onBuildClick?.());
+    bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopPropagation();
+      this.touchControls.stopPanning();
+      this.onBuildClick?.();
+    });
 
     const zoomOut = this.add
       .text(GAME_WIDTH - 160, 12, '−', { fontSize: '20px', color: '#e2e8f0', backgroundColor: '#1e293b' })
@@ -209,15 +249,22 @@ export class WorldScene extends Phaser.Scene {
       .setPadding(8, 4)
       .setInteractive({ useHandCursor: true });
 
-    zoomOut.on('pointerdown', () => this.adjustZoom(-0.15));
-    zoomIn.on('pointerdown', () => this.adjustZoom(0.15));
+    zoomOut.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopPropagation();
+      this.adjustZoom(-0.15);
+    });
+    zoomIn.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopPropagation();
+      this.adjustZoom(0.15);
+    });
 
     this.uiLayer.add([screenBtn, zoomOut, zoomIn]);
     this.uiLayer.setScrollFactor(0);
   }
 
   private drawMapHint() {
-    this.hintLabel = this.add.text(16, GAME_HEIGHT - 32, 'Колёсико — масштаб • Перетаскивание — перемещение', {
+    if (this.hintLabel) this.hintLabel.destroy();
+    this.hintLabel = this.add.text(16, GAME_HEIGHT - 32, getMapHintText(), {
       fontSize: '11px',
       color: '#64748b',
       backgroundColor: '#0f172a99',
@@ -227,41 +274,46 @@ export class WorldScene extends Phaser.Scene {
     this.hintLabel.setDepth(25);
   }
 
-  private setupCameraControls() {
-    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _dx: number, _dy: number, _dz: number, deltaZ: number) => {
-      const next = Phaser.Math.Clamp(this.cameras.main.zoom - deltaZ * 0.001, 0.45, 1.8);
-      this.cameras.main.setZoom(next);
-    });
+  private setupWheelZoom() {
+    this.input.on(
+      'wheel',
+      (
+        _pointer: Phaser.Input.Pointer,
+        _objects: Phaser.GameObjects.GameObject[],
+        _dx: number,
+        _dy: number,
+        _dz: number,
+        deltaZ: number
+      ) => {
+        const next = Phaser.Math.Clamp(this.cameras.main.zoom - deltaZ * 0.001, 0.45, 1.8);
+        this.cameras.main.setZoom(next);
+      }
+    );
+  }
+
+  private setupDoubleTapZoom() {
+    if (!isTouchDevice()) return;
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
-      if (currentlyOver.length > 0) return;
-      if (pointer.y > GAME_HEIGHT - 48 && pointer.x < 420) return;
-      if (pointer.y < 56 && pointer.x > GAME_WIDTH - 180) return;
+      if (currentlyOver.length > 0 || this.isUiPointer(pointer)) return;
+      if (this.input.pointer1.isDown && this.input.pointer2.isDown) return;
 
-      this.isPanning = true;
-      this.panStart = {
-        x: pointer.x,
-        y: pointer.y,
-        scrollX: this.cameras.main.scrollX,
-        scrollY: this.cameras.main.scrollY,
-      };
-    });
+      const now = Date.now();
+      const dt = now - this.lastTapTime;
+      const dist = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.lastTapPos.x, this.lastTapPos.y);
 
-    this.input.on('pointerup', () => {
-      this.isPanning = false;
-    });
+      if (dt < 320 && dist < 24) {
+        const cam = this.cameras.main;
+        const world = cam.getWorldPoint(pointer.x, pointer.y);
+        const targetZoom = cam.zoom < 1.2 ? 1.5 : 0.8;
+        cam.zoomTo(targetZoom, 200);
+        cam.pan(world.x, world.y, 200);
+        this.lastTapTime = 0;
+        return;
+      }
 
-    this.input.on('pointerupoutside', () => {
-      this.isPanning = false;
-    });
-
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.isPanning || !pointer.isDown) return;
-      const zoom = this.cameras.main.zoom;
-      const dx = (pointer.x - this.panStart.x) / zoom;
-      const dy = (pointer.y - this.panStart.y) / zoom;
-      this.cameras.main.scrollX = this.panStart.scrollX - dx;
-      this.cameras.main.scrollY = this.panStart.scrollY - dy;
+      this.lastTapTime = now;
+      this.lastTapPos = { x: pointer.x, y: pointer.y };
     });
   }
 
@@ -276,44 +328,42 @@ export class WorldScene extends Phaser.Scene {
 
     this.enterprises.forEach((ent) => {
       const container = this.add.container(ent.x, ent.y);
-      const building = createEnterpriseBuilding(this, ent.type, ent.profit >= 0);
-      building.setInteractive(
-        new Phaser.Geom.Rectangle(-44, -42, 88, 70),
-        Phaser.Geom.Rectangle.Contains
-      );
-      this.input.setDraggable(building, false);
 
-      const icon = this.add.text(-8, -52, ENTERPRISE_TYPE_ICONS[ent.type] ?? '🏢', {
-        fontSize: '14px',
-      });
+      const statusRing = this.add.circle(0, 2, 28, 0, 0);
+      statusRing.setStrokeStyle(2, ent.profit >= 0 ? 0x22c55e : 0xef4444, 0.95);
+
+      const sprite = createEnterpriseSprite(this, ent.type, ent.profit >= 0);
+      sprite.setInteractive({ useHandCursor: true, pixelPerfect: false });
+      sprite.input!.hitArea = new Phaser.Geom.Rectangle(-24, -40, 48, 48);
+
       const label = this.add.text(-40, -58, ent.name.slice(0, 14), {
         fontSize: '11px',
         color: '#e2e8f0',
         backgroundColor: '#0f172a99',
         padding: { x: 4, y: 2 },
       });
-      const stats = this.add.text(-35, 28, `👷${ent.workers} Lv${ent.level}`, {
+      const stats = this.add.text(-35, 32, `👷${ent.workers} Lv${ent.level}`, {
         fontSize: '10px',
         color: '#94a3b8',
       });
 
-      container.add([building, icon, label, stats]);
+      container.add([statusRing, sprite, label, stats]);
 
-      building.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         pointer.event.stopPropagation();
-        this.isPanning = false;
+        this.touchControls.stopPanning();
         this.tweens.add({
           targets: container,
-          scaleX: 1.08,
-          scaleY: 1.08,
+          scaleX: 1.1,
+          scaleY: 1.1,
           duration: 80,
           yoyo: true,
         });
         this.onEnterpriseClick?.(ent.id);
       });
 
-      building.on('pointerover', () => building.setScale(1.05));
-      building.on('pointerout', () => building.setScale(1));
+      sprite.on('pointerover', () => sprite.setScale(1.08));
+      sprite.on('pointerout', () => sprite.setScale(1));
 
       this.enterpriseLayer.add(container);
     });
@@ -323,17 +373,27 @@ export class WorldScene extends Phaser.Scene {
     if (!this.lockedLayer) return;
     this.lockedLayer.removeAll(true);
 
-    const anchor = this.enterprises.length > 0
-      ? this.enterprises[this.enterprises.length - 1]
-      : { x: 400, y: 400 };
+    const anchor =
+      this.enterprises.length > 0
+        ? this.enterprises[this.enterprises.length - 1]
+        : { x: 400, y: 400 };
 
     this.lockedTypes.slice(0, 3).forEach((type, i) => {
       const container = this.add.container(anchor.x + 120 + i * 90, anchor.y + 60);
-      const ghost = this.add.rectangle(0, 0, 56, 42, ENTERPRISE_COLORS[type] ?? 0x64748b, 0.15);
+      const ghost = this.add.rectangle(0, 0, 48, 48, ENTERPRISE_COLORS[type] ?? 0x64748b, 0.12);
       ghost.setStrokeStyle(1, 0xfbbf24, 0.5);
-      const lock = this.add.text(-8, -10, '🔒', { fontSize: '16px' });
-      const typeLabel = this.add.text(-24, 26, type.slice(0, 8), { fontSize: '9px', color: '#64748b' });
-      container.add([ghost, lock, typeLabel]);
+      container.add(ghost);
+
+      if (this.textures.exists('building_locked')) {
+        const lockSprite = this.add.sprite(0, 0, 'building_locked');
+        lockSprite.setAlpha(0.7);
+        lockSprite.setScale(0.9);
+        container.add(lockSprite);
+      } else {
+        container.add(this.add.text(-8, -10, '🔒', { fontSize: '16px' }));
+      }
+
+      container.add(this.add.text(-24, 28, type.slice(0, 8), { fontSize: '9px', color: '#64748b' }));
       this.lockedLayer.add(container);
     });
   }

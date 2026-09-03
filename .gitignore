@@ -22,3 +22,8 @@ shared/**/*.d.ts.map
 # OS
 .DS_Store
 Thumbs.db
+
+# Archives (do not commit bundled builds)
+*.zip
+*.rar
+*.7z

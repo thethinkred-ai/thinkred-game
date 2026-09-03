@@ -26,6 +26,8 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   runMigrations(db);
 
   saveInterval = setInterval(() => saveDatabase(), 30000);
+  // Don't let the autosave timer hold the event loop open (e.g. test workers).
+  saveInterval.unref();
 
   return db;
 }

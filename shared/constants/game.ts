@@ -13,42 +13,42 @@ export const GAME_CONSTANTS = {
       baseProduction: 100,
       workerCapacity: 20,
       technologyMultiplier: 1.0,
-      unlockConditions: ['lesson_1']
+      unlockConditions: ['lesson_03', 'lesson_04']
     },
     factory: {
       baseCost: 50000,
       baseProduction: 500,
       workerCapacity: 100,
       technologyMultiplier: 1.5,
-      unlockConditions: ['lesson_3', 'lesson_5']
+      unlockConditions: ['lesson_18', 'lesson_20']
     },
     shop: {
       baseCost: 5000,
       baseProduction: 50,
       workerCapacity: 5,
       technologyMultiplier: 1.0,
-      unlockConditions: ['lesson_2']
+      unlockConditions: ['lesson_07', 'lesson_08']
     },
     farm: {
       baseCost: 8000,
       baseProduction: 80,
       workerCapacity: 15,
       technologyMultiplier: 0.8,
-      unlockConditions: ['lesson_1']
+      unlockConditions: ['lesson_03']
     },
     mine: {
       baseCost: 20000,
       baseProduction: 200,
       workerCapacity: 50,
       technologyMultiplier: 1.2,
-      unlockConditions: ['lesson_4']
+      unlockConditions: ['lesson_10']
     },
     research_center: {
       baseCost: 30000,
       baseProduction: 0,
       workerCapacity: 30,
       technologyMultiplier: 2.0,
-      unlockConditions: ['lesson_6', 'lesson_8']
+      unlockConditions: ['lesson_22', 'lesson_28']
     }
   },
   
